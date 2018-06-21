@@ -8,7 +8,7 @@ For more information, see [this post on bitform.at](https://bitform.at/post/1806
 
 ```
 $ aws cloudformation package --template-file sam.yaml --s3-bucket <some_writeable_bucket> --output-template-file sam-output.yaml
-$ aws cloudformation deploy --template-file sam-output.yaml --stack-name mining-monitor --capabilities CAPABILITY_IAM
+$ aws cloudformation deploy --template-file sam-output.yaml --stack-name mining-monitor --parameter-overrides EthosDistroUrl="http://<your_panel>.ethosdistro.com?json=yes" AccessKey=<your_initialstate_access_key> BucketKey=rig-monitor-v1 EtherAddress=<your_ether_wallet_address> --capabilities CAPABILITY_IAM
 ```
 
 ### Things to note
