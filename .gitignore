@@ -1,0 +1,12 @@
+*.log
+node_modules/
+bin/
+.client
+config.json
+*.sublime-workspace
+*.tgz
+pkg/
+.DS_Store
+
+## This is a yaml file created by the packaging task
+sam-output.yaml

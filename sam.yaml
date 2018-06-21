@@ -1,0 +1,186 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # #
+# Leagl stuff. Because, lawyers.
+#
+# Copyright (c) 2018 David Sulpy
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # #
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Defines Lambda Services for polling various APIs for collecting data and sending to Initial State to monitor a mining operation
+Parameters:
+  AppName:
+    Type: String
+    Default: miner-watch
+  EthosDistroUrl:
+    Type: String
+  AccessKey:
+    Type: String
+    NoEcho: true
+  BucketKey:
+    Type: String
+  EtherAddress:
+    Type: String
+
+Globals:
+  Function:
+    Runtime: nodejs8.10
+    MemorySize: 256
+    Timeout: 30
+    Tags:
+      AppName: !Ref AppName
+      Environment: !Ref Environment
+
+Resources:
+  ServiceIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "ServiceIAMRole-2017-01-05"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "dynamodb:*"
+                Resource: !Join ["", ["arn:aws:dynamodb:", !Ref "AWS::Region" ,":", !Ref "AWS::AccountId",":table/", !Ref AppName, "*"]]
+              - Effect: "Allow"
+                Action: "logs:CreateLogGroup"
+                Resource: !Join ["", ["arn:aws:logs:", !Ref "AWS::Region" ,":", !Ref "AWS::AccountId",":*"]]
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: !Join ["", ["arn:aws:logs:", !Ref "AWS::Region" ,":", !Ref "AWS::AccountId",":log-group:/aws/lambda/", !Ref AppName ,"*"]]
+              - Effect: "Allow"
+                Action: "SNS:*"
+                Resource: !Ref RigDataSNS
+
+  RigDataSNS:
+    Type: AWS::SNS::Topic
+
+  MinerWatchService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: miner-watch.rigMonitor
+      Role: !GetAtt ServiceIAMRole.Arn
+      Description: Polls the mining rigs for their stats
+      Environment:
+        Variables:
+          MINING_RIG_URL: !Ref EthosDistroUrl
+          ACCESS_KEY: !Ref AccessKey
+          MAIN_BUCKET_KEY: !Ref BucketKey
+          SEND_RIGDATA_TOPIC: !Ref RigDataSNS
+      Events:
+        MWCron:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)
+
+  PerRigSendService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: miner-watch.sendRigData
+      Role: !GetAtt ServiceIAMRole.Arn
+      Description: Gets Per Rig data from SNS and sends to Initial State
+      Environment:
+        Variables:
+          MINING_RIG_URL: !Ref EthosDistroUrl
+          ACCESS_KEY: !Ref AccessKey
+          MAIN_BUCKET_KEY: !Ref BucketKey
+          SEND_RIGDATA_TOPIC: !Ref RigDataSNS
+      Events:
+        SnsEvents:
+          Type: SNS
+          Properties:
+            Topic: !Ref RigDataSNS
+
+  CryptoNanoPoolUserMonitorService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: miner-watch.nanoPoolUserMonitor
+      Description: monitors mining pool for user stats
+      Role: !GetAtt ServiceIAMRole.Arn
+      Environment:
+        Variables:
+          ACCESS_KEY: !Ref AccessKey
+          MAIN_BUCKET_KEY: !Ref BucketKey
+          ETH_ADDRESS: !Ref EtherAddress
+      Events:
+        CPUMCron:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
+
+  CryptoNanoPoolPaymentMonitorService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: miner-watch.nanoPoolPaymentMonitor
+      Description: monitors mining pool for payments
+      Role: !GetAtt ServiceIAMRole.Arn
+      Environment:
+        Variables:
+          ACCESS_KEY: !Ref AccessKey
+          MAIN_BUCKET_KEY: !Ref BucketKey
+          CHECKPOINT_TABLE: !Ref CryptoPoolMonitorCheckpointTable
+          ETH_ADDRESS: !Ref EtherAddress
+      Events:
+        CPPMCron:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
+
+  CryptoPoolMonitorCheckpointTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Type: String
+        Name: id
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  CryptoNetworkMonitorService:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: miner-watch.networkMonitor
+      Runtime: nodejs4.3
+      Description: monitors mining network for stats
+      MemorySize: 256
+      Timeout: 30
+      Role: !GetAtt ServiceIAMRole.Arn
+      Environment:
+        Variables:
+          ACCESS_KEY: !Ref AccessKey
+          MAIN_BUCKET_KEY: !Ref BucketKey
+      Events:
+        CNMCron:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)
