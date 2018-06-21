@@ -1,7 +1,8 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Leagl stuff. Because, lawyers.
 #
-# Copyright (c) 2018 David Sulpy
+# Copyright (c) 2018 David Sulpy, bitform.at
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
@@ -28,7 +29,7 @@ Description: Defines Lambda Services for polling various APIs for collecting dat
 Parameters:
   AppName:
     Type: String
-    Default: miner-watch
+    Default: mining-monitor
   EthosDistroUrl:
     Type: String
   AccessKey:
@@ -170,10 +171,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: miner-watch.networkMonitor
-      Runtime: nodejs4.3
       Description: monitors mining network for stats
-      MemorySize: 256
-      Timeout: 30
       Role: !GetAtt ServiceIAMRole.Arn
       Environment:
         Variables:
