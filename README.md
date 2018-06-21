@@ -1,5 +1,7 @@
 # Mining Rig Monitor
 
+Send data from a mining farm and ethereum network to Initial State to turn into a beautiful, interactive operations dashboard.
+
 For more information, see [this post on bitform.at](https://bitform.at/post/180621/)
 
 ### To Deploy
