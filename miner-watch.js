@@ -5,7 +5,8 @@ var needle = require('needle'),
 
 exports.rigMonitor = (event, context, callback) => {
 	console.log("calling url:", process.env.MINING_RIG_URL);
-	let sns = new AWS.SNS();
+	let AWS = require('aws-sdk'),
+		sns = new AWS.SNS();
 
 	needle.get(process.env.MINING_RIG_URL, (err, resp, body) => {
 		if (err) {

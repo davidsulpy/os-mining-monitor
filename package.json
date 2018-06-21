@@ -1,0 +1,22 @@
+{
+  "name": "os-rig-monitor",
+  "version": "1.0.0",
+  "description": "https://bitform.at/post/180621",
+  "main": "miner-watch.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidsulpy/os-mining-monitor.git"
+  },
+  "author": "David Sulpy",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/davidsulpy/os-mining-monitor/issues"
+  },
+  "homepage": "https://github.com/davidsulpy/os-mining-monitor#readme",
+  "dependencies": {
+    "needle": "^2.2.1"
+  }
+}
