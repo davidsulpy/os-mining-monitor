@@ -47,7 +47,6 @@ Globals:
     Timeout: 30
     Tags:
       AppName: !Ref AppName
-      Environment: !Ref Environment
 
 Resources:
   ServiceIAMRole:
